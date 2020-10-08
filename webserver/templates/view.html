@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Social Distancing</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+  	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+	<style type = "text/css">
+		#draw-btn {font-size: 14px; padding: 2px 16px 3px 16px;  margin-bottom: 8px;}
+		#sceneImage {width: 1000px; height: 750px } 
+	</style>
+	<script type="text/javascript">
+		var frameNum = 0;
+		var id;
+		
+		var img;
+		var cnvs;
+		var ctx;
+
+		if (!window["WebSocket"]) {
+			alert("Error: Your browser does not support web sockets.")
+		} else {
+			var socket = new WebSocket("ws://{{.Host}}/server");
+			socket.onclose = function() {
+				alert("Connection has been closed.");
+        	}
+			socket.onmessage = function(e) {
+				console.log("[onmessage] receive message.");
+				var msg = JSON.parse(e.data);
+				switch(msg["type"]) {
+					case "image":
+						$("#sceneImage").attr("src", "data:image/jpeg;base64," + msg["img64"]);
+						img = document.getElementById("sceneImage");
+						cnvs = document.getElementById("myCanvas");
+
+						var xPos = img.offsetLeft;
+						var yPos = img.offsetTop;
+  						cnvs.style.position = "absolute";
+						cnvs.width = window.innerWidth;
+						cnvs.height = window.innerHeight;
+						cnvs.style.left = xPos + "px";
+						cnvs.style.top = yPos + "px";
+						ctx = cnvs.getContext("2d");
+
+						break;
+					case "keypoint":
+						draw(msg["bkp"])
+						frameNum++
+						//console.log(msg["ts"])
+						break;
+				}	
+	
+			}
+			socket.onerror = function(err) {
+				console.error('Socket encountered error: ', err.message, 'Closing socket');
+				ws.close()
+			}			
+		}
+
+			
+		function draw(bkp) {
+			var xyArr = bkp.toString().split(",")
+			if (xyArr.length != 0) {
+				for(var i=0; i < xyArr.length; i++) { xyArr[i] = parseInt(xyArr[i], 10); }
+				for (var i = xyArr.length - 1; i >= 0; i--) { // Remove negative numbers
+ 					if (xyArr[i] < 0) {
+  						xyArr.splice(i, 1);
+ 					}
+				}
+				console.log(xyArr);
+				window.setTimeout(drawHelper, frameNum*100, xyArr, ctx, cnvs.width, cnvs.height);
+			}
+		
+		}
+
+
+		function stop() {
+			while (id--) {
+				window.clearTimeout(id);
+			}
+		}
+
+		
+			
+
+		function drawHelper(xyArr, ctx, width, height) {
+			//console.log(xyArr)
+			ctx.clearRect(0, 0, width, height);
+			ctx.save();
+			for(var i=0; i < xyArr.length; i+=4) {
+				ctx.beginPath();
+				ctx.moveTo(xyArr[i], xyArr[i+1]);
+				ctx.lineTo(xyArr[i+2], xyArr[i+3]);
+  				ctx.lineWidth = 3;
+  				ctx.strokeStyle = '#ffffff';
+  				ctx.stroke();
+				ctx.closePath();
+			}
+			ctx.restore();
+  		}
+
+	</script>
+	</head>
+
+	<body>
+		
+		<nav class="navbar navbar-inverse">
+  			<div class="container-fluid">
+    			<div class="navbar-header">
+      				<a class="navbar-brand" href="#">Classroom view</a>
+    			</div>
+    	    	<ul class="nav navbar-nav navbar-right">
+      				<li><a href="/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
+    			</ul>
+  			</div>
+	
+		</nav>
+		<div>
+			<button type="button" class="btn btn-info btn-lg" onclick="stop()">
+				<span class="glyphicon glyphicon-stop"></span> Stop
+			</button>
+
+		</div>
+		<img id="sceneImage"></br>
+		<canvas id='myCanvas' ></canvas>
+	</body>
+
+</html>
+
