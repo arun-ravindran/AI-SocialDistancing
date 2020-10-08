@@ -9,10 +9,3 @@ Edge server hosts the following -
  - Webserver (Golang)
 Web front end (HTML, CSS, Bootstrap and Javascript)
 
-
-To run, in separate terminals
-- start up mongodb and influxdb containers. Check container IP addresses
-- go run utils/image\_upload.go to load background image in mongodb
-- python3 visionAI.py
-- go run app.go
-- go run webserver/*.go
